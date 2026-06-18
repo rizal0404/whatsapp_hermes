@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+sessions/
+logs/
+.DS_Store
+qr_scan.html
+qr_viewer.html

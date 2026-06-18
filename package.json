@@ -1,0 +1,41 @@
+{
+  "name": "wa-gateway",
+  "version": "1.0.0",
+  "description": "WhatsApp API Gateway using Baileys and Node.js TypeScript",
+  "main": "dist/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "test": "vitest run --fileParallelism=false",
+    "test:watch": "vitest",
+    "lint": "eslint \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "@fastify/cors": "^8.3.0",
+    "@prisma/client": "^5.15.0",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "bullmq": "^5.8.2",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.0",
+    "pino": "^9.2.0",
+    "pino-pretty": "^11.2.0",
+    "qrcode": "^1.5.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/qrcode": "^1.5.5",
+    "eslint": "^9.4.0",
+    "prettier": "^3.3.1",
+    "prisma": "^5.15.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

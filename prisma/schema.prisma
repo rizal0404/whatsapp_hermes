@@ -1,0 +1,87 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model WASession {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId          String    @unique @map("session_id") @db.VarChar(100)
+  label              String?   @db.VarChar(255)
+  status             String    @db.VarChar(50)
+  phoneNumber        String?   @map("phone_number") @db.VarChar(50)
+  lastConnectedAt    DateTime? @map("last_connected_at") @db.Timestamptz
+  lastDisconnectedAt DateTime? @map("last_disconnected_at") @db.Timestamptz
+  lastError          String?   @map("last_error") @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("wa_sessions")
+}
+
+model MessageBatch {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchKey      String?      @unique @map("batch_key") @db.VarChar(255)
+  source        String       @db.VarChar(100)
+  status        String       @db.VarChar(50)
+  totalMessages Int          @default(0) @map("total_messages")
+  successCount  Int          @default(0) @map("success_count")
+  failedCount   Int          @default(0) @map("failed_count")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  completedAt   DateTime?    @map("completed_at") @db.Timestamptz
+  messages      MessageLog[]
+
+  @@map("message_batches")
+}
+
+model MessageLog {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId      String        @unique @map("message_id") @db.VarChar(100)
+  batchId        String?       @map("batch_id") @db.Uuid
+  sessionId      String        @map("session_id") @db.VarChar(100)
+  recipient      String        @db.VarChar(100)
+  recipientType  String        @map("recipient_type") @db.VarChar(50)
+  messageType    String        @map("message_type") @db.VarChar(50)
+  idempotencyKey String        @unique @map("idempotency_key") @db.VarChar(255)
+  status         String        @db.VarChar(50)
+  payload        Json          @db.JsonB
+  attempt        Int           @default(0)
+  maxAttempt     Int           @default(3) @map("max_attempt")
+  lastError      String?       @map("last_error") @db.Text
+  queuedAt       DateTime?     @map("queued_at") @db.Timestamptz
+  processingAt   DateTime?     @map("processing_at") @db.Timestamptz
+  sentAt         DateTime?     @map("sent_at") @db.Timestamptz
+  failedAt       DateTime?     @map("failed_at") @db.Timestamptz
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  batch          MessageBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@map("message_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actor      String?  @db.VarChar(100)
+  action     String   @db.VarChar(100)
+  entityType String?  @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.VarChar(100)
+  metadata   Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("audit_logs")
+}
+
+model Recipient {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  type      String   @db.VarChar(50) // "phone" | "group"
+  to        String   @unique @db.VarChar(100) // The phone number or group JID
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("recipients")
+}
