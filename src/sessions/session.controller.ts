@@ -68,7 +68,14 @@ export const listSessions = async (request: FastifyRequest, reply: FastifyReply)
 
 export const getSessionQrPage = async (request: FastifyRequest, reply: FastifyReply) => {
   const { sessionId } = request.params as { sessionId: string };
+  const { key } = request.query as { key?: string };
   const apiKey = env.API_KEY;
+
+  // Validate API key from query parameter
+  if (!key || key !== apiKey) {
+    reply.status(401).send('<h1>Unauthorized</h1><p>Append ?key=YOUR_API_KEY to the URL</p>');
+    return;
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="en">

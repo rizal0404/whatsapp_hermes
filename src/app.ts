@@ -8,6 +8,7 @@ import { messageRoutes } from './messages/message.routes';
 import { recipientRoutes } from './recipients/recipient.routes';
 import { sessionRoutes } from './sessions/session.routes';
 import { metricsRoutes } from './monitoring/metrics.routes';
+import { getSessionQrPage } from './sessions/session.controller';
 import { logger } from './common/logger';
 
 export function buildApp(): FastifyInstance {
@@ -50,6 +51,9 @@ export function buildApp(): FastifyInstance {
 
   // Health check - Open public endpoint
   app.register(healthRoutes);
+
+  // QR Page - Public endpoint (auth handled internally via query param)
+  app.get('/v1/sessions/:sessionId/qr-page', getSessionQrPage);
 
   // API v1 prefix routes - All routes under here are protected by API key auth hook
   app.register(async (v1) => {
