@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@fastify/cors": "^8.3.0",
+    "@fastify/swagger": "^9.7.0",
+    "@fastify/swagger-ui": "^6.0.0",
     "@prisma/client": "^5.15.0",
     "@whiskeysockets/baileys": "^6.7.9",
     "bullmq": "^5.8.2",

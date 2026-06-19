@@ -5,6 +5,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] - 2026-06-19
+
+### Added
+
+#### Groups API (`/v1/groups`)
+- **List Groups**: `GET /v1/groups/:sessionId` — Fetches all WhatsApp groups joined by a session, returning group JID (`xxxx@g.us`), name, participant count, and creation timestamp. Results sorted alphabetically by group name.
+- **Group Detail**: `GET /v1/groups/:sessionId/:groupJid` — Retrieves detailed metadata for a specific group including description, owner, and full participant list with admin roles.
+- **New Module**: Created `src/groups/` module with `group.service.ts`, `group.controller.ts`, and `group.routes.ts` following existing project patterns.
+
+#### Swagger API Dashboard (`/docs`)
+- **Interactive API Documentation**: Integrated `@fastify/swagger` (OpenAPI 3.0.3) and `@fastify/swagger-ui` to auto-generate and serve a premium interactive API dashboard at `/docs`.
+- **Full Schema Annotations**: All 18 API endpoints across 7 modules (Health, Sessions, Messages, Groups, Hermes, Recipients, Monitoring) are fully documented with request/response schemas, examples, and descriptions.
+- **Premium WhatsApp Theme**: Custom CSS theme with WhatsApp brand colors (#25D366), gradient-styled HTTP method badges, polished topbar, and enhanced readability.
+- **API Key Authentication**: Swagger UI includes "Authorize" button for persistent `X-API-Key` header injection — enables direct endpoint testing from the browser.
+- **Universal Deployment**: Dynamic server URL with protocol/host variables — auto-detects the current environment. Works identically on `http://localhost:3000/docs` (local) and `https://yourdomain.com/docs` (VPS).
+- **CSP Security Fix**: Exempted `/docs` path from strict Content-Security-Policy header to allow Swagger UI inline styles and scripts.
+
+### Dependencies Added
+- `@fastify/swagger` ^9.x
+- `@fastify/swagger-ui` ^5.x
+
+---
+
 ## [1.0.0] - 2026-06-19
 
 ### 🚀 First Production Release

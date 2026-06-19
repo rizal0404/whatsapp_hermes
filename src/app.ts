@@ -7,8 +7,10 @@ import { hermesRoutes } from './hermes/hermes.routes';
 import { messageRoutes } from './messages/message.routes';
 import { recipientRoutes } from './recipients/recipient.routes';
 import { sessionRoutes } from './sessions/session.routes';
+import { groupRoutes } from './groups/group.routes';
 import { metricsRoutes } from './monitoring/metrics.routes';
 import { getSessionQrPage } from './sessions/session.controller';
+import { registerSwagger } from './config/swagger';
 import { logger } from './common/logger';
 
 export function buildApp(): FastifyInstance {
@@ -21,10 +23,13 @@ export function buildApp(): FastifyInstance {
     origin: '*',
   });
 
+  // Register Swagger (OpenAPI docs) — must be registered before routes
+  registerSwagger(app);
+
   // Security Headers (Helmet-equivalent)
   app.addHook('onSend', async (request, reply, payload) => {
-    // Skip strict CSP for QR page (it needs inline styles/scripts)
-    if (!request.url.includes('/qr-page')) {
+    // Skip strict CSP for QR page and Swagger docs (they need inline styles/scripts)
+    if (!request.url.includes('/qr-page') && !request.url.startsWith('/docs')) {
       reply.header('Content-Security-Policy', "default-src 'self'");
     }
     reply.header('X-Frame-Options', 'DENY');
@@ -64,6 +69,7 @@ export function buildApp(): FastifyInstance {
 
     v1.register(sessionRoutes);
     v1.register(messageRoutes);
+    v1.register(groupRoutes);
     v1.register(hermesRoutes);
     v1.register(recipientRoutes);
     v1.register(metricsRoutes);
