@@ -23,7 +23,10 @@ export function buildApp(): FastifyInstance {
 
   // Security Headers (Helmet-equivalent)
   app.addHook('onSend', async (request, reply, payload) => {
-    reply.header('Content-Security-Policy', "default-src 'self'");
+    // Skip strict CSP for QR page (it needs inline styles/scripts)
+    if (!request.url.includes('/qr-page')) {
+      reply.header('Content-Security-Policy', "default-src 'self'");
+    }
     reply.header('X-Frame-Options', 'DENY');
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('Referrer-Policy', 'no-referrer');
