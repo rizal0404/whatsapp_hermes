@@ -11,6 +11,7 @@ export type ErrorCode =
   | 'INTERNAL_ERROR';
 
 export class AppError extends Error {
+  public readonly isAppError = true;
   constructor(
     public readonly code: ErrorCode,
     message: string,

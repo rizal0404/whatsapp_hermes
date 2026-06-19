@@ -82,17 +82,13 @@ export async function hermesRoutes(fastify: FastifyInstance) {
               type: 'object',
               properties: {
                 batchId: { type: 'string', description: 'Unique batch identifier', example: 'batch_rpt_20260619' },
-                status: { type: 'string', description: 'Overall batch status', example: 'completed' },
-                counts: {
-                  type: 'object',
-                  description: 'Delivery count breakdown',
-                  properties: {
-                    total: { type: 'integer', example: 12 },
-                    sent: { type: 'integer', example: 10 },
-                    failed: { type: 'integer', example: 2 },
-                    pending: { type: 'integer', example: 0 },
-                  },
-                },
+                batchKey: { type: 'string', description: 'Batch key identifier', example: 'batch_session-01_2026-06-19' },
+                status: { type: 'string', description: 'Overall batch status', example: 'QUEUED' },
+                totalMessages: { type: 'integer', description: 'Total messages in this batch', example: 12 },
+                successCount: { type: 'integer', description: 'Number of successfully sent messages', example: 10 },
+                failedCount: { type: 'integer', description: 'Number of failed messages', example: 2 },
+                createdAt: { type: 'string', format: 'date-time', description: 'Timestamp when the batch was created' },
+                completedAt: { type: 'string', format: 'date-time', nullable: true, description: 'Timestamp when the batch completed processing' },
                 messages: {
                   type: 'array',
                   description: 'Per-message delivery details',

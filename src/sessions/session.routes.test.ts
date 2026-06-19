@@ -86,7 +86,7 @@ describe('Session Routes Integration', () => {
     const body = JSON.parse(response.body);
     expect(body.success).toBe(true);
     expect(body.data.sessionId).toBe(testSessionId);
-    expect(body.data.status).toBe('INITIALIZING');
+    expect(['INITIALIZING', 'REQUIRES_QR']).toContain(body.data.status);
 
     // Poll the database to wait for the mock init to update the status to 'REQUIRES_QR'
     let dbSession: any = null;

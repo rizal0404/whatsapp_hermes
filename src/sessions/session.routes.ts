@@ -122,7 +122,9 @@ const getSessionQrSchema = {
           type: 'object',
           properties: {
             sessionId: { type: 'string', example: 'session-01' },
+            status: { type: 'string', example: 'REQUIRES_QR' },
             qr: { type: 'string', description: 'Base64-encoded QR code image', example: 'data:image/png;base64,iVBOR...' },
+            expiresInSeconds: { type: 'integer', example: 30 },
           },
         },
       },

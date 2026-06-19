@@ -16,6 +16,11 @@ import { logger } from './common/logger';
 export function buildApp(): FastifyInstance {
   const app = fastify({
     logger: false, // We use custom logger
+    ajv: {
+      customOptions: {
+        strict: false,
+      },
+    },
   });
 
   // Register CORS
@@ -65,7 +70,7 @@ export function buildApp(): FastifyInstance {
 
   // API v1 prefix routes - All routes under here are protected by API key auth hook
   app.register(async (v1) => {
-    v1.addHook('preHandler', apiKeyAuth);
+    v1.addHook('preValidation', apiKeyAuth);
 
     v1.register(sessionRoutes);
     v1.register(messageRoutes);

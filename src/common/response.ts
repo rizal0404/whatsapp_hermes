@@ -11,13 +11,25 @@ export const sendSuccess = (reply: FastifyReply, data: any = {}, statusCode: num
 };
 
 export const sendError = (reply: FastifyReply, error: any) => {
-  if (error instanceof AppError) {
+  if (error instanceof AppError || error.isAppError === true) {
     return reply.code(error.statusCode).send({
       success: false,
       error: {
         code: error.code,
         message: error.message,
         details: error.details,
+      },
+    });
+  }
+
+  // Handle Fastify validation errors
+  if (error.validation || error.code === 'FST_ERR_VALIDATION') {
+    return reply.code(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: error.message,
+        details: error.validation || {},
       },
     });
   }
