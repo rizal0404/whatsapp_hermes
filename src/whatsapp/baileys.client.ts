@@ -194,6 +194,10 @@ export class BaileysClient {
     // Also extract just the phone number part for flexible matching
     const sessionPhone = sessionUserJid.split(':')[0].split('@')[0];
 
+    // Support WhatsApp LID (List Identifier) format for mentions/replies
+    const sessionUserLid = (this.socket.user as any)?.lid;
+    const sessionLidPhone = sessionUserLid ? sessionUserLid.split(':')[0].split('@')[0] : null;
+
     // 4. Extract the message content and contextInfo
     const messageContent = msg.message;
     if (!messageContent) return;
@@ -211,7 +215,7 @@ export class BaileysClient {
     if (contextInfo?.mentionedJid && contextInfo.mentionedJid.length > 0) {
       isMentioned = contextInfo.mentionedJid.some((jid) => {
         const mentionPhone = jid.split(':')[0].split('@')[0];
-        return mentionPhone === sessionPhone;
+        return mentionPhone === sessionPhone || (sessionLidPhone && mentionPhone === sessionLidPhone);
       });
     }
 
@@ -223,7 +227,7 @@ export class BaileysClient {
       const quotedParticipant = contextInfo.participant || '';
       const quotedPhone = quotedParticipant.split(':')[0].split('@')[0];
       
-      if (quotedPhone === sessionPhone) {
+      if (quotedPhone === sessionPhone || (sessionLidPhone && quotedPhone === sessionLidPhone)) {
         isReplied = true;
         quotedMessageId = contextInfo.stanzaId || null;
         quotedContent = this.extractTextContent(contextInfo.quotedMessage) || null;
