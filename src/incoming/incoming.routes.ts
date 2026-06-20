@@ -5,6 +5,7 @@ import {
   markAllAsRead,
   getMessage,
   markAsRead,
+  pollUnprocessed,
 } from './incoming.controller';
 
 const messageProperties = {
@@ -212,4 +213,29 @@ export async function incomingRoutes(fastify: FastifyInstance) {
       },
     },
   }, markAsRead);
+
+  // 6. POST /incoming/poll-unprocessed
+  fastify.post('/incoming/poll-unprocessed', {
+    schema: {
+      summary: 'Trigger manual fallback polling',
+      description: 'Manually trigger fallback polling to check for undelivered (PENDING) incoming webhooks and re-queue them.',
+      tags: ['Incoming'],
+      security: [{ apiKey: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: {
+              type: 'object',
+              properties: {
+                queuedCount: { type: 'integer', example: 5, description: 'Number of webhooks re-queued' },
+                message: { type: 'string', example: 'Successfully polled and queued 5 webhook(s)' },
+              },
+            },
+          },
+        },
+      },
+    },
+  }, pollUnprocessed);
 }

@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0] - 2026-06-21
+
+### Added
+- **Queue-backed Webhook Retry System**: Replaced the fire-and-forget webhook with a BullMQ queue-backed reliable delivery system (`incoming-webhook-queue`), retry attempts up to 5 times, and automatic exponential backoff.
+- **Hermes Incoming Webhook Receiver**: Added `POST /v1/hermes/incoming-webhook` receiver endpoint to handle incoming message dispatches.
+- **`replyToMessageId` Quote Reply**: Supported quoting prior messages by ID in `POST /v1/messages/send-text` and `POST /v1/messages/send-document`. Automatically retrieves content/sender of target message to structure visual quote bubble.
+- **Fallback Webhook Poller**: Periodic poller service that detects unprocessed `PENDING` incoming message webhooks and re-enqueues them automatically.
+- **Manual Poller Trigger**: Added `POST /v1/incoming/poll-unprocessed` endpoint to manually trigger poller recovery.
+- **Centralized JID/LID Utilities**: Implemented normalization functions (`normalizeUserJid`, `extractPhoneFromJid`, `extractPhoneFromLid`, `isSameUser`) in `src/whatsapp/jid.util.ts`.
+
+### Changed
+- **Baileys Incoming Message Detection**: Refactored `BaileysClient` to use centralized `isSameUser` comparison helper for mention and quote detection, enhancing reliability.
+- **Database Schema**: Added tracking columns (`webhookStatus`, `webhookAttempts`, `webhookLastError`, `webhookDeliveredAt`) to `IncomingMessage` model in Prisma.
+
+---
+
 ## [1.2.0] - 2026-06-20
 
 ### Added

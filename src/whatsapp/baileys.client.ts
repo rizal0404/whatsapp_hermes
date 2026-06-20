@@ -15,6 +15,7 @@ import { env } from '../config/env';
 import { logger } from '../common/logger';
 import { SessionStatus } from '../sessions/session.types';
 import { IncomingMessageData, TriggerType, IncomingMessageType } from '../incoming/incoming.types';
+import { isSameUser, normalizeUserJid, extractPhoneFromJid } from './jid.util';
 
 export type IncomingMessageCallback = (data: IncomingMessageData) => Promise<void>;
 
@@ -98,7 +99,7 @@ export class BaileysClient {
           this.reconnectCount = 0;
           this.qrCode = null;
           const userJid = this.socket?.user?.id;
-          const phoneNumber = userJid ? userJid.split(':')[0] : undefined;
+          const phoneNumber = userJid ? extractPhoneFromJid(userJid) : undefined;
           
           await this.onStatusChange('CONNECTED', {
             phoneNumber,
@@ -190,13 +191,8 @@ export class BaileysClient {
     const sessionUserJid = this.socket.user?.id;
     if (!sessionUserJid) return;
 
-    // Normalize session user JID: '6281xxx:123@s.whatsapp.net' -> '6281xxx@s.whatsapp.net'
-    // Also extract just the phone number part for flexible matching
-    const sessionPhone = sessionUserJid.split(':')[0].split('@')[0];
-
     // Support WhatsApp LID (List Identifier) format for mentions/replies
     const sessionUserLid = (this.socket.user as any)?.lid;
-    const sessionLidPhone = sessionUserLid ? sessionUserLid.split(':')[0].split('@')[0] : null;
 
     // 4. Extract the message content and contextInfo
     const messageContent = msg.message;
@@ -214,8 +210,7 @@ export class BaileysClient {
     let isMentioned = false;
     if (contextInfo?.mentionedJid && contextInfo.mentionedJid.length > 0) {
       isMentioned = contextInfo.mentionedJid.some((jid) => {
-        const mentionPhone = jid.split(':')[0].split('@')[0];
-        return mentionPhone === sessionPhone || (sessionLidPhone && mentionPhone === sessionLidPhone);
+        return isSameUser(jid, sessionUserJid) || isSameUser(jid, sessionUserLid);
       });
     }
 
@@ -225,9 +220,8 @@ export class BaileysClient {
     let quotedContent: string | null = null;
     if (contextInfo?.quotedMessage) {
       const quotedParticipant = contextInfo.participant || '';
-      const quotedPhone = quotedParticipant.split(':')[0].split('@')[0];
       
-      if (quotedPhone === sessionPhone || (sessionLidPhone && quotedPhone === sessionLidPhone)) {
+      if (isSameUser(quotedParticipant, sessionUserJid) || isSameUser(quotedParticipant, sessionUserLid)) {
         isReplied = true;
         quotedMessageId = contextInfo.stanzaId || null;
         quotedContent = this.extractTextContent(contextInfo.quotedMessage) || null;

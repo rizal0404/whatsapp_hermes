@@ -13,6 +13,7 @@ export interface SendTextMessageInput {
   to: string;
   message: string;
   idempotencyKey: string;
+  replyToMessageId?: string;
 }
 
 export interface SendDocumentMessageInput {
@@ -23,6 +24,7 @@ export interface SendDocumentMessageInput {
   fileName: string;
   mimeType: string;
   idempotencyKey: string;
+  replyToMessageId?: string;
 }
 
 export interface MessageJobPayload {
@@ -31,6 +33,7 @@ export interface MessageJobPayload {
   to: string;
   type: MessageType;
   text?: string;
+  replyToMessageId?: string;
   document?: {
     fileUrl: string;
     fileName: string;

@@ -5,6 +5,7 @@ export const sendTextMessageSchema = z.object({
   to: z.string().min(1, 'recipient phone or group JID is required'),
   message: z.string().min(1, 'message body is required'),
   idempotencyKey: z.string().min(1, 'idempotencyKey is required'),
+  replyToMessageId: z.string().optional(),
 });
 
 export const sendDocumentMessageSchema = z.object({
@@ -15,4 +16,5 @@ export const sendDocumentMessageSchema = z.object({
   fileName: z.string().min(1, 'fileName is required'),
   mimeType: z.string().min(1, 'mimeType is required'),
   idempotencyKey: z.string().min(1, 'idempotencyKey is required'),
+  replyToMessageId: z.string().optional(),
 });

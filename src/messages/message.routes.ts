@@ -16,6 +16,7 @@ export async function messageRoutes(fastify: FastifyInstance) {
           to: { type: 'string', description: 'Recipient phone number or group JID', example: '6281234567890@s.whatsapp.net' },
           message: { type: 'string', description: 'Text message content', example: 'Hello from Hermes!' },
           idempotencyKey: { type: 'string', description: 'Unique key to prevent duplicate sends', example: '550e8400-e29b-41d4-a716-446655440000' },
+          replyToMessageId: { type: 'string', description: 'Optional ID of the message to quote/reply to', example: '3EB0A1B2C3D4E5F7' },
         },
       },
       response: {
@@ -54,6 +55,7 @@ export async function messageRoutes(fastify: FastifyInstance) {
           mimeType: { type: 'string', description: 'MIME type of the document', example: 'application/pdf' },
           caption: { type: 'string', description: 'Optional caption for the document', example: 'Monthly report' },
           idempotencyKey: { type: 'string', description: 'Unique key to prevent duplicate sends', example: '550e8400-e29b-41d4-a716-446655440001' },
+          replyToMessageId: { type: 'string', description: 'Optional ID of the message to quote/reply to', example: '3EB0A1B2C3D4E5F7' },
         },
       },
       response: {

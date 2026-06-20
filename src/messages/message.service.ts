@@ -19,7 +19,7 @@ export class MessageService {
   }
 
   async sendText(input: SendTextMessageInput & { batchId?: string }): Promise<MessageLog> {
-    const { sessionId, to, message, idempotencyKey, batchId } = input;
+    const { sessionId, to, message, idempotencyKey, batchId, replyToMessageId } = input;
 
     // 1. Check if session exists in DB
     const session = await sessionRepository.findBySessionId(sessionId);
@@ -38,7 +38,7 @@ export class MessageService {
     const recipientType = getRecipientType(recipientJid);
     const messageId = this.generateMessageId();
 
-    const payload = { text: message };
+    const payload = { text: message, replyToMessageId };
 
     // 4. Save to Message Log as QUEUED
     const log = await messageRepository.create({
@@ -60,6 +60,7 @@ export class MessageService {
       to: recipientJid,
       type: 'text',
       text: message,
+      replyToMessageId,
     };
     await addMessageJob(jobPayload);
 
@@ -69,7 +70,7 @@ export class MessageService {
   }
 
   async sendDocument(input: SendDocumentMessageInput & { batchId?: string }): Promise<MessageLog> {
-    const { sessionId, to, caption, fileUrl, fileName, mimeType, idempotencyKey, batchId } = input;
+    const { sessionId, to, caption, fileUrl, fileName, mimeType, idempotencyKey, batchId, replyToMessageId } = input;
 
     // 1. Check if session exists in DB
     const session = await sessionRepository.findBySessionId(sessionId);
@@ -93,6 +94,7 @@ export class MessageService {
       fileUrl,
       fileName,
       mimeType,
+      replyToMessageId,
     };
 
     // 4. Save to Message Log as QUEUED
@@ -114,6 +116,7 @@ export class MessageService {
       sessionId,
       to: recipientJid,
       type: 'document',
+      replyToMessageId,
       document: {
         fileUrl,
         fileName,

@@ -3,6 +3,7 @@ import { hermesService } from './hermes.service';
 import { hermesSendDailyReportSchema } from './hermes.schema';
 import { sendSuccess } from '../common/response';
 import { ValidationError } from '../common/errors';
+import { logger } from '../common/logger';
 
 export const sendDailyReport = async (request: FastifyRequest, reply: FastifyReply) => {
   const result = hermesSendDailyReportSchema.safeParse(request.body);
@@ -35,3 +36,13 @@ export const getBatchStatus = async (request: FastifyRequest, reply: FastifyRepl
     messages: batch.messages,
   });
 };
+
+export const handleIncomingWebhook = async (request: FastifyRequest, reply: FastifyReply) => {
+  const payload = request.body as any;
+  logger.info({ payload }, 'Received incoming webhook in Hermes receiver');
+
+  // Business logic for handling incoming webhook in Hermes can go here
+
+  return sendSuccess(reply, { message: 'Webhook received successfully' });
+};
+

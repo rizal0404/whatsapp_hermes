@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { sendDailyReport, getBatchStatus } from './hermes.controller';
+import { sendDailyReport, getBatchStatus, handleIncomingWebhook } from './hermes.controller';
 
 export async function hermesRoutes(fastify: FastifyInstance) {
   fastify.post('/hermes/send-daily-report', {
@@ -110,4 +110,55 @@ export async function hermesRoutes(fastify: FastifyInstance) {
       },
     },
   }, getBatchStatus);
+
+  fastify.post('/hermes/incoming-webhook', {
+    schema: {
+      summary: 'Receive incoming message webhook',
+      description: 'Receiver endpoint for Hermes incoming messages webhook.',
+      tags: ['Hermes'],
+      body: {
+        type: 'object',
+        required: ['event', 'data'],
+        properties: {
+          event: { type: 'string', example: 'message.incoming' },
+          timestamp: { type: 'string', format: 'date-time' },
+          data: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              sessionId: { type: 'string' },
+              remoteJid: { type: 'string' },
+              senderJid: { type: 'string' },
+              senderName: { type: 'string', nullable: true },
+              waMessageId: { type: 'string' },
+              triggerType: { type: 'string' },
+              messageType: { type: 'string' },
+              content: { type: 'string', nullable: true },
+              quotedMessageId: { type: 'string', nullable: true },
+              quotedContent: { type: 'string', nullable: true },
+              isGroup: { type: 'boolean' },
+              groupName: { type: 'string', nullable: true },
+              isRead: { type: 'boolean' },
+              messageTimestamp: { type: 'string', format: 'date-time' },
+              createdAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: {
+              type: 'object',
+              properties: {
+                message: { type: 'string', example: 'Webhook received successfully' },
+              },
+            },
+          },
+        },
+      },
+    },
+  }, handleIncomingWebhook);
 }

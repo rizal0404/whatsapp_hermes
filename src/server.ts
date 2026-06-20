@@ -5,9 +5,12 @@ import { prisma } from './database/prisma';
 import { sessionManager } from './sessions/session.manager';
 import { startMessageWorker } from './messages/message.worker';
 import { startIncomingCleanup } from './incoming/incoming.cleanup';
+import { startWebhookWorker } from './incoming/incoming.webhook.worker';
+import { incomingPoller } from './incoming/incoming.poller';
 
 const app = buildApp();
 let messageWorker: any = null;
+let webhookWorker: any = null;
 
 const start = async () => {
   try {
@@ -21,11 +24,17 @@ const start = async () => {
     messageWorker = startMessageWorker();
     logger.info('⚙️ Message queue worker started.');
 
+    webhookWorker = startWebhookWorker();
+    logger.info('⚙️ Webhook queue worker started.');
+
     // Initialize sessions in background after server is up
     sessionManager.initAllSessions();
 
     // Start incoming messages cleanup scheduler
     startIncomingCleanup();
+
+    // Start incoming webhook poller fallback
+    incomingPoller.start();
   } catch (err) {
     logger.error({ err }, 'Failed to start server');
     process.exit(1);
@@ -54,7 +63,23 @@ const shutdown = async (signal: string) => {
     }
   }
 
-  // 3. Shut down all active WhatsApp sessions
+  if (webhookWorker) {
+    try {
+      await webhookWorker.close();
+      logger.info('BullMQ webhook worker closed.');
+    } catch (err) {
+      logger.error({ err }, 'Error closing BullMQ webhook worker');
+    }
+  }
+
+  // 3. Stop incoming webhook poller
+  try {
+    incomingPoller.stop();
+  } catch (err) {
+    logger.error({ err }, 'Error stopping incoming webhook poller');
+  }
+
+  // 4. Shut down all active WhatsApp sessions
   try {
     await sessionManager.shutdownAll();
     logger.info('All active WhatsApp sessions shutdown.');
@@ -62,7 +87,7 @@ const shutdown = async (signal: string) => {
     logger.error({ err }, 'Error shutting down WhatsApp sessions');
   }
 
-  // 4. Disconnect database client
+  // 5. Disconnect database client
   try {
     await prisma.$disconnect();
     logger.info('Prisma database connection closed.');

@@ -109,6 +109,49 @@ export class IncomingMessageRepository {
     });
     return result.count;
   }
+
+  async incrementWebhookAttempt(id: string): Promise<IncomingMessage> {
+    return prisma.incomingMessage.update({
+      where: { id },
+      data: {
+        webhookAttempts: { increment: 1 },
+      },
+    });
+  }
+
+  async updateWebhookStatus(
+    id: string,
+    status: string,
+    error?: string
+  ): Promise<IncomingMessage> {
+    const data: any = {
+      webhookStatus: status,
+      webhookLastError: error || null,
+    };
+
+    if (status === 'DELIVERED') {
+      data.webhookDeliveredAt = new Date();
+    }
+
+    return prisma.incomingMessage.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async findUndeliveredWebhooks(limit: number): Promise<IncomingMessage[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - 24); // limit to messages from the last 24 hours
+
+    return prisma.incomingMessage.findMany({
+      where: {
+        webhookStatus: 'PENDING',
+        createdAt: { gte: cutoffDate },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
+  }
 }
 
 export const incomingRepository = new IncomingMessageRepository();

@@ -51,3 +51,54 @@ export function getRecipientType(jid: string): 'phone' | 'group' {
   }
   return 'phone';
 }
+
+/**
+ * Normalizes Baileys user JID by removing device/stream details.
+ * e.g., '628123456789:1@s.whatsapp.net' -> '628123456789@s.whatsapp.net'
+ */
+export function normalizeUserJid(jid: string): string {
+  const clean = jid.split(':')[0];
+  if (clean.includes('@')) {
+    return clean;
+  }
+  // Check if it's lid or net
+  if (jid.includes('@lid')) {
+    return `${clean}@lid`;
+  }
+  return `${clean}@s.whatsapp.net`;
+}
+
+/**
+ * Extracts the phone/number part of any WhatsApp JID (e.g., standard, LID, or group ID).
+ * e.g., '628123456789:1@s.whatsapp.net' -> '628123456789'
+ */
+export function extractPhoneFromJid(jid: string): string {
+  return jid.split(':')[0].split('@')[0];
+}
+
+/**
+ * Extracts phone/ID part of LID format.
+ */
+export function extractPhoneFromLid(lid: string | undefined): string | null {
+  if (!lid) return null;
+  return extractPhoneFromJid(lid);
+}
+
+/**
+ * Compares two WhatsApp JIDs or LIDs to check if they represent the same user.
+ */
+export function isSameUser(jid1: string, jid2: string | null | undefined): boolean {
+  if (!jid2) return false;
+  return extractPhoneFromJid(jid1) === extractPhoneFromJid(jid2);
+}
+
+/**
+ * Gets the suffix of a JID (e.g., 's.whatsapp.net', 'g.us', 'lid').
+ */
+export function getJidSuffix(jid: string): string {
+  if (jid.includes('@')) {
+    return jid.split('@')[1];
+  }
+  return '';
+}
+

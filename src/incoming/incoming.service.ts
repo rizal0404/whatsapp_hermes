@@ -6,6 +6,8 @@ import { SessionNotFoundError, AppError } from '../common/errors';
 import { IncomingMessage } from '@prisma/client';
 import { IncomingMessageData, IncomingMessageFilters } from './incoming.types';
 import { env } from '../config/env';
+import { addWebhookJob } from './incoming.webhook.queue';
+import { incomingWebhookService } from './incoming.webhook';
 
 export class IncomingService {
   async saveIncomingMessage(data: IncomingMessageData): Promise<void> {
@@ -30,10 +32,13 @@ export class IncomingService {
         'Saved incoming message'
       );
 
-      // Fire webhook async
-      this.fireWebhook(message).catch((err) => {
-        logger.error({ err }, 'Error in fireWebhook background task');
-      });
+      // Enqueue webhook jobs
+      const webhookUrls = await incomingWebhookService.getWebhookUrls();
+      for (const url of webhookUrls) {
+        addWebhookJob({ messageId: message.id, webhookUrl: url }).catch((err) => {
+          logger.error({ err, messageId: message.id, url }, 'Failed to enqueue webhook job');
+        });
+      }
     } catch (err) {
       logger.error({ err, data }, 'Failed to save incoming message');
     }
@@ -121,59 +126,7 @@ export class IncomingService {
     return incomingRepository.getUnreadCount(sessionId);
   }
 
-  async fireWebhook(message: IncomingMessage): Promise<void> {
-    try {
-      const webhookUrlSetting = await settingsRepository.get('webhookUrl');
-      const webhookUrl = webhookUrlSetting || env.WEBHOOK_URL;
-
-      if (!webhookUrl || webhookUrl.trim() === '') {
-        return;
-      }
-
-      logger.debug({ webhookUrl, messageId: message.id }, 'Firing incoming message webhook');
-
-      // Use native global fetch
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          event: 'message.incoming',
-          timestamp: new Date().toISOString(),
-          data: {
-            id: message.id,
-            sessionId: message.sessionId,
-            remoteJid: message.remoteJid,
-            senderJid: message.senderJid,
-            senderName: message.senderName,
-            waMessageId: message.waMessageId,
-            triggerType: message.triggerType,
-            messageType: message.messageType,
-            content: message.content,
-            quotedMessageId: message.quotedMessageId,
-            quotedContent: message.quotedContent,
-            isGroup: message.isGroup,
-            groupName: message.groupName,
-            isRead: message.isRead,
-            messageTimestamp: message.messageTimestamp.toISOString(),
-            createdAt: message.createdAt.toISOString(),
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        logger.warn(
-          { webhookUrl, status: response.status, statusText: response.statusText },
-          'Webhook request failed'
-        );
-      } else {
-        logger.debug({ webhookUrl, messageId: message.id }, 'Webhook fired successfully');
-      }
-    } catch (err) {
-      logger.error({ err, messageId: message.id }, 'Failed to fire webhook');
-    }
-  }
+  // fireWebhook method removed, delivery handled by incoming.webhook.worker
 
   async cleanupOldMessages(): Promise<number> {
     try {

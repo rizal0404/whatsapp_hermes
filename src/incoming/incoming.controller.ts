@@ -3,6 +3,7 @@ import { incomingService } from './incoming.service';
 import { sendSuccess } from '../common/response';
 import { ValidationError } from '../common/errors';
 import { z } from 'zod';
+import { incomingPoller } from './incoming.poller';
 
 const listMessagesQuerySchema = z.object({
   triggerType: z.enum(['mention', 'reply', 'mention_reply']).optional(),
@@ -59,4 +60,9 @@ export const getUnreadCount = async (request: FastifyRequest, reply: FastifyRepl
   const { sessionId } = request.params as { sessionId: string };
   const unreadCount = await incomingService.getUnreadCount(sessionId);
   return sendSuccess(reply, { sessionId, unreadCount });
+};
+
+export const pollUnprocessed = async (request: FastifyRequest, reply: FastifyReply) => {
+  const queuedCount = await incomingPoller.poll();
+  return sendSuccess(reply, { queuedCount, message: `Successfully polled and queued ${queuedCount} webhook(s)` });
 };

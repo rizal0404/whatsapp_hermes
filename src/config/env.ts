@@ -19,6 +19,10 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   INCOMING_RETENTION_DAYS: z.coerce.number().default(30),
   WEBHOOK_URL: z.string().optional(),
+  HERMES_WEBHOOK_URL: z.string().optional(),
+  WEBHOOK_MAX_RETRIES: z.coerce.number().default(5),
+  WEBHOOK_RETRY_DELAY_MS: z.coerce.number().default(5000),
+  INCOMING_POLL_INTERVAL_MS: z.coerce.number().default(300000),
 });
 
 const parseEnv = () => {
