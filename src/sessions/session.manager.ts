@@ -4,6 +4,7 @@ import { SessionStatus } from './session.types';
 import { logger } from '../common/logger';
 import { WASession } from '@prisma/client';
 import { SessionNotFoundError } from '../common/errors';
+import { incomingService } from '../incoming/incoming.service';
 
 export class SessionManager {
   private activeClients = new Map<string, BaileysClient>();
@@ -67,6 +68,11 @@ export class SessionManager {
       if (status === 'LOGGED_OUT') {
         this.activeClients.delete(sessionId);
       }
+    });
+
+    // Wire incoming message callback
+    client.setIncomingMessageHandler(async (msgData) => {
+      await incomingService.saveIncomingMessage(msgData);
     });
 
     this.activeClients.set(sessionId, client);

@@ -3,6 +3,30 @@
 All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+
+---
+
+## [1.2.0] - 2026-06-20
+
+### Added
+
+#### Incoming Messages (Mentions & Replies)
+- **Baileys Client Event Hook**: Added `messages.upsert` handler to BaileysClient. Auto-detects when the logged-in session user is mentioned (`@`) or has their message replied to/quoted (both in personal chats and groups).
+- **Persistent Incoming Message Store**: Stores incoming messages in a new PostgreSQL table `incoming_messages` with trigger type, sender JID, name, remote Jid, message type, content, quoted message metadata, group info, and read status.
+- **REST Endpoints**:
+  - `GET /v1/incoming/:sessionId` — Lists incoming messages with triggers, supporting pagination and filters (triggerType, isGroup, isRead, page, limit, sortOrder).
+  - `GET /v1/incoming/:sessionId/unread-count` — Retrieves the total count of unread mention/reply messages for a session.
+  - `GET /v1/incoming/:sessionId/:messageId` — Gets details of a single message, including the raw Baileys JSON payload.
+  - `PATCH /v1/incoming/:sessionId/:messageId/read` — Marks a single incoming message as read.
+  - `PATCH /v1/incoming/:sessionId/read-all` — Marks all incoming messages for a session as read.
+- **Dynamic Configuration & Webhooks**:
+  - **Dynamic Gateway Settings**: Added a key-value store using the `GatewaySettings` model (`src/settings`).
+  - **Webhook Notification**: Dispatches HTTP POST webhooks (`message.incoming`) to a configured callback URL (retrieved from settings or falling back to `WEBHOOK_URL` env variable) whenever a matching incoming message is saved.
+  - **Retention Cleanup Job**: Automatically schedules a daily cleanup job that purges incoming messages older than the configured threshold (default 30 days, configurable via settings).
+- **REST Endpoints for Configuration**:
+  - `GET /v1/settings` — Retrieves current settings (retention days, webhook URL).
+  - `PATCH /v1/settings` — Updates settings dynamically.
+
 ---
 
 ## [1.1.0] - 2026-06-19

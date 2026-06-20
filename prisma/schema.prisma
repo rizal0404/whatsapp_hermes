@@ -85,3 +85,39 @@ model Recipient {
 
   @@map("recipients")
 }
+
+model IncomingMessage {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId        String    @map("session_id") @db.VarChar(100)
+  remoteJid        String    @map("remote_jid") @db.VarChar(100)
+  senderJid        String    @map("sender_jid") @db.VarChar(100)
+  senderName       String?   @map("sender_name") @db.VarChar(255)
+  waMessageId      String    @map("wa_message_id") @db.VarChar(255)
+  triggerType       String    @map("trigger_type") @db.VarChar(50)
+  messageType      String    @map("message_type") @db.VarChar(50)
+  content          String?   @db.Text
+  quotedMessageId  String?   @map("quoted_message_id") @db.VarChar(255)
+  quotedContent    String?   @map("quoted_content") @db.Text
+  isGroup          Boolean   @default(false) @map("is_group")
+  groupName        String?   @map("group_name") @db.VarChar(255)
+  isRead           Boolean   @default(false) @map("is_read")
+  messageTimestamp DateTime  @map("message_timestamp") @db.Timestamptz
+  rawPayload       Json?     @map("raw_payload") @db.JsonB
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([sessionId, waMessageId])
+  @@index([sessionId, isRead])
+  @@index([sessionId, triggerType])
+  @@index([sessionId, isGroup])
+  @@index([messageTimestamp])
+  @@map("incoming_messages")
+}
+
+model GatewaySettings {
+  key       String   @id @db.VarChar(100)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("gateway_settings")
+}

@@ -46,6 +46,8 @@ vi.mock('../whatsapp/baileys.client', () => {
       }
 
       public async close() {}
+
+      public setIncomingMessageHandler(handler: any) {}
     },
   };
 });

@@ -12,6 +12,8 @@ import { metricsRoutes } from './monitoring/metrics.routes';
 import { getSessionQrPage } from './sessions/session.controller';
 import { registerSwagger } from './config/swagger';
 import { logger } from './common/logger';
+import { incomingRoutes } from './incoming/incoming.routes';
+import { settingsRoutes } from './settings/settings.routes';
 
 export function buildApp(): FastifyInstance {
   const app = fastify({
@@ -78,6 +80,8 @@ export function buildApp(): FastifyInstance {
     v1.register(hermesRoutes);
     v1.register(recipientRoutes);
     v1.register(metricsRoutes);
+    v1.register(incomingRoutes);
+    v1.register(settingsRoutes);
   }, { prefix: '/v1' });
 
   return app;

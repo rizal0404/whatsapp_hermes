@@ -6,3 +6,5 @@ logs/
 .DS_Store
 qr_scan.html
 qr_viewer.html
+/auth/
+

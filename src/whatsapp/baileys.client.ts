@@ -5,6 +5,8 @@ import makeWASocket, {
   WASocket,
   ConnectionState,
   fetchLatestBaileysVersion,
+  WAMessage,
+  proto,
 } from '@whiskeysockets/baileys';
 import path from 'path';
 import fs from 'fs';
@@ -12,6 +14,9 @@ import QRCode from 'qrcode';
 import { env } from '../config/env';
 import { logger } from '../common/logger';
 import { SessionStatus } from '../sessions/session.types';
+import { IncomingMessageData, TriggerType, IncomingMessageType } from '../incoming/incoming.types';
+
+export type IncomingMessageCallback = (data: IncomingMessageData) => Promise<void>;
 
 export class BaileysClient {
   public socket: WASocket | null = null;
@@ -19,6 +24,7 @@ export class BaileysClient {
   private maxReconnects = 5;
   private qrCode: string | null = null;
   private isShuttingDown = false;
+  private incomingMessageHandler: IncomingMessageCallback | null = null;
 
   constructor(
     public readonly sessionId: string,
@@ -27,6 +33,14 @@ export class BaileysClient {
 
   public getQrCode(): string | null {
     return this.qrCode;
+  }
+
+  /**
+   * Register a handler for incoming messages (mentions & replies).
+   * Must be called before init() or between reconnects.
+   */
+  public setIncomingMessageHandler(handler: IncomingMessageCallback): void {
+    this.incomingMessageHandler = handler;
   }
 
   public async init(): Promise<void> {
@@ -137,10 +151,206 @@ export class BaileysClient {
           }
         }
       });
+
+      // Register Incoming Messages handler (mentions & replies)
+      if (this.incomingMessageHandler) {
+        this.socket.ev.on('messages.upsert', async ({ messages, type }) => {
+          // Only process real-time notifications, skip history sync
+          if (type !== 'notify') return;
+
+          for (const msg of messages) {
+            try {
+              await this.processIncomingMessage(msg);
+            } catch (err) {
+              logger.error({ err, sessionId: this.sessionId, waMessageId: msg.key?.id }, 'Error processing incoming message');
+            }
+          }
+        });
+      }
     } catch (err: any) {
       logger.error({ err, sessionId: this.sessionId }, 'Failed to initialize Baileys connection');
       await this.onStatusChange('ERROR', { lastError: err.message });
     }
+  }
+
+  /**
+   * Process a single incoming message: detect mentions and replies to the session user.
+   */
+  private async processIncomingMessage(msg: WAMessage): Promise<void> {
+    if (!this.incomingMessageHandler || !this.socket) return;
+
+    // 1. Skip messages sent by the session user
+    if (msg.key.fromMe) return;
+
+    // 2. Skip status broadcasts and protocol messages
+    const remoteJid = msg.key.remoteJid;
+    if (!remoteJid || remoteJid === 'status@broadcast') return;
+
+    // 3. Get the session user's JID for comparison
+    const sessionUserJid = this.socket.user?.id;
+    if (!sessionUserJid) return;
+
+    // Normalize session user JID: '6281xxx:123@s.whatsapp.net' -> '6281xxx@s.whatsapp.net'
+    // Also extract just the phone number part for flexible matching
+    const sessionPhone = sessionUserJid.split(':')[0].split('@')[0];
+
+    // 4. Extract the message content and contextInfo
+    const messageContent = msg.message;
+    if (!messageContent) return;
+
+    // Skip ephemeral/protocol wrappers — unwrap if needed
+    const innerMessage = messageContent.ephemeralMessage?.message || messageContent;
+
+    // Get contextInfo from whichever message type is present
+    const contextInfo = this.extractContextInfo(innerMessage);
+    const textContent = this.extractTextContent(innerMessage);
+    const messageType = this.detectMessageType(innerMessage);
+
+    // 5. Check for mention
+    let isMentioned = false;
+    if (contextInfo?.mentionedJid && contextInfo.mentionedJid.length > 0) {
+      isMentioned = contextInfo.mentionedJid.some((jid) => {
+        const mentionPhone = jid.split(':')[0].split('@')[0];
+        return mentionPhone === sessionPhone;
+      });
+    }
+
+    // 6. Check for reply/quote
+    let isReplied = false;
+    let quotedMessageId: string | null = null;
+    let quotedContent: string | null = null;
+    if (contextInfo?.quotedMessage) {
+      const quotedParticipant = contextInfo.participant || '';
+      const quotedPhone = quotedParticipant.split(':')[0].split('@')[0];
+      
+      if (quotedPhone === sessionPhone) {
+        isReplied = true;
+        quotedMessageId = contextInfo.stanzaId || null;
+        quotedContent = this.extractTextContent(contextInfo.quotedMessage) || null;
+      }
+    }
+
+    // 7. Determine trigger type
+    if (!isMentioned && !isReplied) return; // Not relevant, skip
+
+    let triggerType: TriggerType;
+    if (isMentioned && isReplied) {
+      triggerType = 'mention_reply';
+    } else if (isMentioned) {
+      triggerType = 'mention';
+    } else {
+      triggerType = 'reply';
+    }
+
+    // 8. Determine sender
+    const isGroup = remoteJid.endsWith('@g.us');
+    const senderJid = isGroup
+      ? (msg.key.participant || '')
+      : remoteJid;
+
+    // 9. Build the incoming message data
+    const timestamp = msg.messageTimestamp
+      ? new Date(typeof msg.messageTimestamp === 'number'
+          ? msg.messageTimestamp * 1000
+          : Number(msg.messageTimestamp) * 1000)
+      : new Date();
+
+    const data: IncomingMessageData = {
+      sessionId: this.sessionId,
+      remoteJid,
+      senderJid,
+      senderName: msg.pushName || null,
+      waMessageId: msg.key.id || '',
+      triggerType,
+      messageType,
+      content: textContent || null,
+      quotedMessageId,
+      quotedContent,
+      isGroup,
+      groupName: null, // Will be resolved by the listener if needed
+      messageTimestamp: timestamp,
+      rawPayload: JSON.parse(JSON.stringify(msg)), // Deep clone for safe serialization
+    };
+
+    // 10. Fire the callback (fire-and-forget from Baileys perspective)
+    logger.info(
+      {
+        sessionId: this.sessionId,
+        triggerType,
+        senderJid,
+        remoteJid,
+        isGroup,
+        waMessageId: msg.key.id,
+      },
+      `Incoming ${triggerType} message detected`
+    );
+
+    await this.incomingMessageHandler(data);
+  }
+
+  /**
+   * Extract contextInfo from any message type.
+   */
+  private extractContextInfo(msg: any): proto.IContextInfo | null {
+    if (!msg) return null;
+    // Check all known message types that can have contextInfo
+    const types = [
+      'extendedTextMessage',
+      'imageMessage',
+      'videoMessage',
+      'documentMessage',
+      'audioMessage',
+      'stickerMessage',
+      'contactMessage',
+      'locationMessage',
+      'viewOnceMessage',
+      'viewOnceMessageV2',
+    ];
+    for (const type of types) {
+      if (msg[type]?.contextInfo) {
+        return msg[type].contextInfo;
+      }
+    }
+    // Also check viewOnceMessage wrapper
+    if (msg.viewOnceMessage?.message) {
+      return this.extractContextInfo(msg.viewOnceMessage.message);
+    }
+    if (msg.viewOnceMessageV2?.message) {
+      return this.extractContextInfo(msg.viewOnceMessageV2.message);
+    }
+    return null;
+  }
+
+  /**
+   * Extract text content from any message type.
+   */
+  private extractTextContent(msg: any): string | null {
+    if (!msg) return null;
+    if (msg.conversation) return msg.conversation;
+    if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
+    if (msg.imageMessage?.caption) return msg.imageMessage.caption;
+    if (msg.videoMessage?.caption) return msg.videoMessage.caption;
+    if (msg.documentMessage?.caption) return msg.documentMessage.caption;
+    if (msg.documentMessage?.title) return msg.documentMessage.title;
+    if (msg.viewOnceMessage?.message) return this.extractTextContent(msg.viewOnceMessage.message);
+    if (msg.viewOnceMessageV2?.message) return this.extractTextContent(msg.viewOnceMessageV2.message);
+    return null;
+  }
+
+  /**
+   * Detect the message type from the inner message content.
+   */
+  private detectMessageType(msg: any): IncomingMessageType {
+    if (!msg) return 'other';
+    if (msg.conversation || msg.extendedTextMessage) return 'text';
+    if (msg.imageMessage) return 'image';
+    if (msg.videoMessage) return 'video';
+    if (msg.documentMessage) return 'document';
+    if (msg.audioMessage) return 'audio';
+    if (msg.stickerMessage) return 'sticker';
+    if (msg.viewOnceMessage?.message) return this.detectMessageType(msg.viewOnceMessage.message);
+    if (msg.viewOnceMessageV2?.message) return this.detectMessageType(msg.viewOnceMessageV2.message);
+    return 'other';
   }
 
   public async logout(): Promise<void> {

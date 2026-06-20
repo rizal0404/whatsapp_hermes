@@ -4,6 +4,7 @@ import { logger } from './common/logger';
 import { prisma } from './database/prisma';
 import { sessionManager } from './sessions/session.manager';
 import { startMessageWorker } from './messages/message.worker';
+import { startIncomingCleanup } from './incoming/incoming.cleanup';
 
 const app = buildApp();
 let messageWorker: any = null;
@@ -22,6 +23,9 @@ const start = async () => {
 
     // Initialize sessions in background after server is up
     sessionManager.initAllSessions();
+
+    // Start incoming messages cleanup scheduler
+    startIncomingCleanup();
   } catch (err) {
     logger.error({ err }, 'Failed to start server');
     process.exit(1);

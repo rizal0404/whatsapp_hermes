@@ -17,6 +17,8 @@ const envSchema = z.object({
   MAX_FILE_SIZE_MB: z.coerce.number().default(20),
   ALLOWED_FILE_DOMAINS: z.string().transform((val) => val.split(',').map((d) => d.trim())),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  INCOMING_RETENTION_DAYS: z.coerce.number().default(30),
+  WEBHOOK_URL: z.string().optional(),
 });
 
 const parseEnv = () => {
