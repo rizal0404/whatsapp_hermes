@@ -94,9 +94,14 @@ nano .env
 
 Make sure to change the following values:
 - `API_KEY`: Generate a secure, 32-character random string (e.g., `openssl rand -hex 16`).
-- `POSTGRES_PASSWORD`: Use a strong password for your database.
-- `DATABASE_URL`: Update the password in the connection string to match `POSTGRES_PASSWORD`.
+- `POSTGRES_PASSWORD`: Use a strong password for your database container initialization.
+- `DATABASE_URL`: Update the password inside the connection string to exactly match `POSTGRES_PASSWORD`. Example: `postgresql://postgres:YOUR_PASSWORD@postgres:5432/wa_gateway?schema=public` (keep the host as `postgres` inside the Docker network).
 - `ALLOWED_FILE_DOMAINS`: Add your Hermes domain name and any other storage domains, separated by commas.
+
+> [!IMPORTANT]
+> The database password in `POSTGRES_PASSWORD` and the password inside the `DATABASE_URL` connection string must match exactly.
+>
+> Note: The `.env.production` file is ignored by Git, so your credentials will not be committed or modified by `git pull`. Any custom credentials should be configured in `.env`.
 
 ---
 

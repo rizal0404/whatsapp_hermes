@@ -12,7 +12,7 @@ services:
       NODE_ENV: production
       PORT: ${PORT:-3000}
       API_KEY: ${API_KEY:-change-me-key}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-wa_gateway}?schema=public
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       WA_AUTH_DIR: /app/auth
       QR_TTL_SECONDS: ${QR_TTL_SECONDS:-30}
